@@ -1,5 +1,6 @@
 #define _LARGEFILE64_SOURCE
 #define _FILE_OFFSET_BITS 64
+#define _GNU_SOURCE
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -28,7 +29,7 @@ main(int argc, char **argv)
 
 
 	fname = argv[1];
-	fd = open(fname, O_RDONLY);
+	fd = open(fname, O_RDWR);
 	if (fd < 0) {
 		perror("Error opening file\n");
 		exit(0);
@@ -38,7 +39,7 @@ main(int argc, char **argv)
 	fsize = st.st_size;
 	
 	while(1) {
-		read(fd, buf, BUF_SIZE);
+		write(fd, buf, BUF_SIZE);
 		ret = lseek64(fd, CHUNK_SIZE, SEEK_CUR);
 		printf("%lld\n", ret);
 		if (ret > fsize) {
