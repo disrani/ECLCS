@@ -11,6 +11,7 @@ import thread
 WHITE = '#ffffff'
 GREEN = '#00ff00'
 RED = '#ff0000'
+BLUE = '#0000ff'
 
 WIDTH = 200
 HEIGHT = 800
@@ -28,11 +29,13 @@ reclaim_pattern = re.compile(".* FUSE: Reclaim: (\d+)")
 last_pos = 0
 img = None
 canvas = None
+block_status = dict() 
 
 class NewLogDataHandler(pyinotify.ProcessEvent):
 	def process_IN_MODIFY(self, event):
 		global last_pos
 		global img
+		global block_status
 
 		p,file_modified = os.path.split(event.pathname)
 		if (fname == file_modified):
@@ -49,7 +52,11 @@ class NewLogDataHandler(pyinotify.ProcessEvent):
 					pos = int(matches[0][1])
 					start,end = get_block_range(pos, length)
 					while (start <= end):
-						update_block(start, GREEN)
+						if (start in block_status and \
+							block_status[start] != RED):
+							update_block(start, BLUE)
+						else: 
+							update_block(start, GREEN)
 						print start," in cache"
 						start = start + 1
 				else:
@@ -59,7 +66,11 @@ class NewLogDataHandler(pyinotify.ProcessEvent):
 						pos = int(matches[0][1])
 						start,end = get_block_range(pos, length)
 						while (start <= end):
-							update_block(start, GREEN)
+							if (start in block_status and \
+								block_status[start] != RED):
+								update_block(start, BLUE)
+							else: 
+								update_block(start, GREEN)
 							print start," in cache"
 							start = start + 1
 					else: 
@@ -71,6 +82,9 @@ class NewLogDataHandler(pyinotify.ProcessEvent):
 				
 def update_block(num, color):
 	global img
+	global block_status
+
+	block_status[num] = color
 	col = num / WIDTH * BLOCK_WIDTH
 	row = num % WIDTH * BLOCK_HEIGHT
 	for i in range(col, col+BLOCK_WIDTH):
@@ -98,22 +112,6 @@ def start_ui():
 	mainFrame['height'] = HEIGHT
 	mainFrame['width'] = WIDTH
 
-
-	'''	
-	for i in range(40):
-		chunk_frames.append([])
-		for j in range(20):
-			chunk_frames[i].append(Frame(mainFrame)) 
-			chunk_frames[i][j]['borderwidth'] = 2
-			chunk_frames[i][j]['relief'] = 'raised'
-			chunk_frames[i][j]['height'] = 1
-			chunk_frames[i][j]['width'] = 1
-			chunk_frames[i][j].grid(row=i, column=j)
-			l = Label(chunk_frames[i][j], text="i")
-			l['height'] = 1
-			l['width'] = 1
-			l.grid()
-	'''		
 	img = PhotoImage(width = WIDTH, height = HEIGHT)
 	img = PhotoImage(width=WIDTH, height=HEIGHT)
 
@@ -130,7 +128,6 @@ def start_ui():
 	mainFrame.grid()
 	thread.start_new_thread(tk.mainloop, ())
 
-
 opts = optparse.OptionParser()
 opts.add_option('--log_file', '-l', action='store')
 
@@ -140,7 +137,6 @@ print "Num blocks:", NUM_BLOCKS
 
 if (options.log_file is None):
 	sys.exit("No log file name give")
-
 
 f = open(options.log_file, 'r')
 # Go to the end of the log file
